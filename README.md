@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🎤 AI Presentation Generator
+# 🎤 Claude Deck Generator
 
 **Generate professional presentations from any topic using Claude AI — in seconds**
 
@@ -25,6 +25,18 @@
 ## Overview
 
 Provide a topic, choose a theme, and get a polished `.pptx` or `.html` presentation — complete with structured slides and speaker notes. Backed by **Claude Opus 4.6** by default, with an alternate provider path through **NVIDIA NIM** (Writer Palmyra-Creative-122B). Supports remixing existing decks, controlling slide count, and embedding Unsplash photos.
+
+---
+
+## Claude Code Plugin
+
+Install as a Claude Code plugin to get `/deck` and `/deck-remix` slash commands directly in your terminal:
+
+```bash
+npx skills add Moodswing9/claude-deck-generator -g
+```
+
+This registers the skill and commands globally so you can run `/deck "Your Topic"` from any Claude Code session.
 
 ---
 

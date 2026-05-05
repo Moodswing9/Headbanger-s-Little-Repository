@@ -1,0 +1,30 @@
+{
+  "name": "claude-deck-generator",
+  "version": "4.0.0",
+  "description": "Generate polished .pptx or .html presentations from any topic using Claude AI — with themes, remix mode, Unsplash images, and speaker notes. One command to a boardroom-ready deck.",
+  "author": {
+    "name": "Moodswing9",
+    "url": "https://github.com/Moodswing9"
+  },
+  "homepage": "https://github.com/Moodswing9/claude-deck-generator",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Moodswing9/claude-deck-generator.git"
+  },
+  "license": "SEE LICENSE IN LICENSE",
+  "keywords": [
+    "presentation",
+    "powerpoint",
+    "pptx",
+    "slides",
+    "deck",
+    "claude-ai",
+    "generator",
+    "automation",
+    "claude-skill"
+  ],
+  "components": {
+    "skills": ["./skills/claude-deck-generator"],
+    "commands": ["./commands"]
+  }
+}
