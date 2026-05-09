@@ -16,6 +16,8 @@ python generate.py "Your Topic" --remix old.pptx    # remix an existing deck via
 python generate.py "Your Topic" --slides 8          # control slide count (4–20, default 12)
 python generate.py "Your Topic" --no-notes          # omit speaker notes
 python generate.py --list-themes
+python generate.py "Your Topic" --provider claude-haiku  # fast draft via Haiku 4.5
+python generate.py "Your Topic" --provider nvidia        # NVIDIA NIM (Palmyra)
 
 # Required environment variable
 export ANTHROPIC_API_KEY=sk-ant-...
@@ -37,6 +39,8 @@ The core generation lives in `generate.py`, which is also imported by `app.py` (
 Adding a new theme means adding one dict entry with both sets of keys.
 
 **`generate_content(topic, *, reference_markdown="", slide_count=12)`** calls `claude-opus-4-6` with `thinking: {type: "adaptive"}` and `output_config.format` set to `SLIDE_SCHEMA`. When `reference_markdown` is supplied (from `ingest_pptx()`), it is injected into the user message inside `<reference_deck>` tags and Claude rebuilds the deck from that material. `slide_count` is clamped to 4–20.
+
+**`generate_content_haiku(topic, *, reference_markdown="", slide_count=12)`** is the fast-draft variant. Uses `claude-haiku-4-5-20251001` without adaptive thinking and a 4 000-token ceiling. Returns the same dict structure — all downstream builders work unchanged. Pass `--provider claude-haiku` to use it.
 
 **`ingest_pptx(path)`** uses MarkItDown to convert an existing `.pptx` file into Markdown, extracting slide titles, text, tables, charts, and speaker notes. The result is passed as `reference_markdown` to `generate_content()`.
 

@@ -32,6 +32,7 @@ from generate import (
     build_pptx,
     build_html,
     generate_content,
+    generate_content_haiku,
     ingest_pptx,
     validate_topic,
     validate_output_path,
@@ -378,6 +379,85 @@ class TestGenerateContent(unittest.TestCase):
 
         result = generate_content("Topic")
         self.assertEqual(result["title"], "Test Presentation")
+
+
+# ---------------------------------------------------------------------------
+# generate_content_haiku — fast draft provider
+# ---------------------------------------------------------------------------
+
+class TestGenerateContentHaiku(unittest.TestCase):
+
+    def _make_mock_response(self, data: dict):
+        text_block = MagicMock()
+        text_block.type = "text"
+        text_block.text = json.dumps(data)
+        response = MagicMock()
+        response.content = [text_block]
+        return response
+
+    @patch("generate.anthropic.Anthropic")
+    def test_returns_parsed_dict(self, mock_anthropic_cls):
+        mock_client = MagicMock()
+        mock_anthropic_cls.return_value = mock_client
+        mock_client.messages.create.return_value = self._make_mock_response(SAMPLE_DATA)
+
+        result = generate_content_haiku("Test Topic")
+        self.assertEqual(result["title"], "Test Presentation")
+        self.assertEqual(len(result["slides"]), 5)
+
+    @patch("generate.anthropic.Anthropic")
+    def test_calls_haiku_model(self, mock_anthropic_cls):
+        mock_client = MagicMock()
+        mock_anthropic_cls.return_value = mock_client
+        mock_client.messages.create.return_value = self._make_mock_response(SAMPLE_DATA)
+
+        generate_content_haiku("Some Topic")
+        call_kwargs = mock_client.messages.create.call_args[1]
+        self.assertEqual(call_kwargs["model"], "claude-haiku-4-5-20251001")
+
+    @patch("generate.anthropic.Anthropic")
+    def test_no_adaptive_thinking(self, mock_anthropic_cls):
+        mock_client = MagicMock()
+        mock_anthropic_cls.return_value = mock_client
+        mock_client.messages.create.return_value = self._make_mock_response(SAMPLE_DATA)
+
+        generate_content_haiku("Some Topic")
+        call_kwargs = mock_client.messages.create.call_args[1]
+        self.assertNotIn("thinking", call_kwargs)
+
+    @patch("generate.anthropic.Anthropic")
+    def test_slide_count_clamped_to_min(self, mock_anthropic_cls):
+        mock_client = MagicMock()
+        mock_anthropic_cls.return_value = mock_client
+        mock_client.messages.create.return_value = self._make_mock_response(SAMPLE_DATA)
+
+        generate_content_haiku("Topic", slide_count=1)
+        call_kwargs = mock_client.messages.create.call_args[1]
+        user_message = call_kwargs["messages"][0]["content"]
+        self.assertIn(str(SLIDES_MIN), user_message)
+
+    @patch("generate.anthropic.Anthropic")
+    def test_reference_deck_injected(self, mock_anthropic_cls):
+        mock_client = MagicMock()
+        mock_anthropic_cls.return_value = mock_client
+        mock_client.messages.create.return_value = self._make_mock_response(SAMPLE_DATA)
+
+        generate_content_haiku("Topic", reference_markdown="## Slide 1\nSome content")
+        call_kwargs = mock_client.messages.create.call_args[1]
+        user_message = call_kwargs["messages"][0]["content"]
+        self.assertIn("<reference_deck>", user_message)
+
+    @patch("generate.anthropic.Anthropic")
+    def test_structured_output_schema_used(self, mock_anthropic_cls):
+        mock_client = MagicMock()
+        mock_anthropic_cls.return_value = mock_client
+        mock_client.messages.create.return_value = self._make_mock_response(SAMPLE_DATA)
+
+        generate_content_haiku("Topic")
+        call_kwargs = mock_client.messages.create.call_args[1]
+        fmt = call_kwargs["output_config"]["format"]
+        self.assertEqual(fmt["type"], "json_schema")
+        self.assertEqual(fmt["schema"], SLIDE_SCHEMA)
 
 
 # ---------------------------------------------------------------------------

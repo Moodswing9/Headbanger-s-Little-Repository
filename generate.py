@@ -542,6 +542,65 @@ def generate_content(
     return json.loads(text)
 
 
+def generate_content_haiku(
+    topic: str,
+    *,
+    reference_markdown: str = "",
+    slide_count: int = SLIDES_DEFAULT,
+) -> dict:
+    """Generate slide content using Claude Haiku 4.5 — fast, low-cost draft mode.
+
+    Uses claude-haiku-4-5-20251001 without adaptive thinking. Returns the same
+    dict structure as generate_content() so downstream builders work unchanged.
+    Suitable for quick iterations; use --provider anthropic (Opus) for final output.
+    """
+    _check_rate_limit()
+    slide_count = max(SLIDES_MIN, min(SLIDES_MAX, slide_count))
+    client = anthropic.Anthropic()
+
+    if reference_markdown:
+        print(f"[Haiku] Remixing existing deck into {slide_count} slides about: {topic}")
+        user_message = (
+            f"Here is an existing presentation for reference:\n\n"
+            f"<reference_deck>\n{reference_markdown}\n</reference_deck>\n\n"
+            f"Using the above as source material, create an improved, professional "
+            f"{slide_count}-slide presentation about: {topic}\n\n"
+            "Preserve strong points from the reference, sharpen the language, improve "
+            "narrative structure, and ensure every slide earns its place. "
+            "Structure: opening hook (stat or quote), agenda, 2-3 major sections each "
+            "preceded by a section slide, supporting content slides, and a strong closing."
+        )
+    else:
+        print(f"[Haiku] Generating {slide_count}-slide presentation about: {topic}")
+        user_message = (
+            f"Create a professional {slide_count}-slide presentation about: {topic}\n\n"
+            "Structure: opening hook (stat or quote), agenda, 2-3 major sections each "
+            "preceded by a section slide, supporting content slides, and a strong closing."
+        )
+
+    response = client.messages.create(
+        model="claude-haiku-4-5-20251001",
+        max_tokens=4000,
+        system=(
+            "You are a presentation strategist. Create professional slide decks with "
+            "clear narrative flow, precise language, and varied layouts.\n\n"
+            "Slide type guidelines:\n"
+            "- 'content': 3-5 crisp bullet points, each under 12 words\n"
+            "- 'section': transition slide between major sections, set bullets to []\n"
+            "- 'quote': a compelling quote, set bullets to [], populate quote and attribution\n"
+            "- 'stat': one striking statistic (e.g. '$4.2T', '73%', '10x'), "
+            "  set bullets to [], populate stat and stat_label\n\n"
+            "Use a mix of types. Every 2-3 content slides, insert a section, quote, or stat."
+        ),
+        messages=[{"role": "user", "content": user_message}],
+        output_config={
+            "format": {"type": "json_schema", "schema": SLIDE_SCHEMA}
+        },
+    )
+    text = next(b.text for b in response.content if b.type == "text")
+    return json.loads(text)
+
+
 # ---------------------------------------------------------------------------
 # PPTX builder
 # ---------------------------------------------------------------------------
@@ -917,8 +976,8 @@ def main():
                         help=f"Target slide count ({SLIDES_MIN}–{SLIDES_MAX}, default: {SLIDES_DEFAULT})")
     parser.add_argument("--no-notes", action="store_true",
                         help="Omit speaker notes from the output")
-    parser.add_argument("--provider", choices=["anthropic", "nvidia"], default="anthropic",
-                        help="AI provider for content generation (default: anthropic)")
+    parser.add_argument("--provider", choices=["anthropic", "claude-haiku", "nvidia"], default="anthropic",
+                        help="AI provider for content generation: anthropic (Opus 4.6, default), claude-haiku (Haiku 4.5, fast draft), nvidia (Palmyra via NIM)")
     args = parser.parse_args()
 
     if args.list_themes:
@@ -955,6 +1014,12 @@ def main():
             print("Error: NVIDIA_API_KEY environment variable is required for --provider nvidia")
             sys.exit(1)
         data = generate_content_nvidia(
+            topic,
+            reference_markdown=reference_markdown,
+            slide_count=args.slides,
+        )
+    elif args.provider == "claude-haiku":
+        data = generate_content_haiku(
             topic,
             reference_markdown=reference_markdown,
             slide_count=args.slides,
