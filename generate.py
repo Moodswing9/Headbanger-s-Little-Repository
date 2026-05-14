@@ -547,6 +547,7 @@ def generate_content_haiku(
     *,
     reference_markdown: str = "",
     slide_count: int = SLIDES_DEFAULT,
+    _return_usage: bool = False,
 ) -> dict:
     """Generate slide content using Claude Haiku 4.5 — fast, low-cost draft mode.
 
@@ -598,7 +599,10 @@ def generate_content_haiku(
         },
     )
     text = next(b.text for b in response.content if b.type == "text")
-    return json.loads(text)
+    data = json.loads(text)
+    if _return_usage:
+        return data, response.usage
+    return data
 
 
 # ---------------------------------------------------------------------------
@@ -978,6 +982,8 @@ def main():
                         help="Omit speaker notes from the output")
     parser.add_argument("--provider", choices=["anthropic", "claude-haiku", "nvidia"], default="anthropic",
                         help="AI provider for content generation: anthropic (Opus 4.6, default), claude-haiku (Haiku 4.5, fast draft), nvidia (Palmyra via NIM)")
+    parser.add_argument("--draft", action="store_true",
+                        help="Two-phase mode: generate Haiku outline first (~20s, ~$0.02), confirm structure, then upscale to Opus 4.6")
     args = parser.parse_args()
 
     if args.list_themes:
@@ -1009,7 +1015,55 @@ def main():
         print("Warning: --vision has no effect without --remix.")
 
     theme = THEMES[args.theme]
-    if args.provider == "nvidia":
+    if args.draft:
+        # ── Phase 1: Haiku outline ────────────────────────────────────────────
+        print("[Draft] Generating outline with Claude Haiku 4.5…")
+        draft_data, usage = generate_content_haiku(
+            topic,
+            reference_markdown=reference_markdown,
+            slide_count=args.slides,
+            _return_usage=True,
+        )
+
+        # Cost estimate (Haiku 4.5 pricing)
+        haiku_cost = (usage.input_tokens / 1_000 * 0.0008) + (usage.output_tokens / 1_000 * 0.004)
+
+        # Print outline
+        sep = "─" * 62
+        print(f"\n{sep}")
+        print(f"  {draft_data['title']}")
+        if draft_data.get("subtitle"):
+            print(f"  {draft_data['subtitle']}")
+        print(sep)
+        for i, slide in enumerate(draft_data["slides"], 1):
+            stype  = slide.get("type", "content").upper()
+            stitle = slide.get("title", "")
+            bullets = slide.get("bullets") or []
+            print(f"  {i:>2}. [{stype:<8}] {stitle}")
+            for b in bullets[:3]:
+                print(f"           • {b}")
+        print(sep)
+        print(
+            f"\n[Haiku 4.5]  {usage.input_tokens:,} in + {usage.output_tokens:,} out "
+            f"tokens | ~${haiku_cost:.3f}"
+        )
+        opus_est = "~$0.20–0.50"
+        print(f"[Opus 4.6]   ~30–90 s to generate | estimated cost: {opus_est}\n")
+
+        # ── Phase 2: confirm and upscale ─────────────────────────────────────
+        try:
+            input(
+                "Happy with the structure? Press Enter to upscale to Claude Opus 4.6, "
+                "or Ctrl+C to exit without generating a file.\n> "
+            )
+        except KeyboardInterrupt:
+            print("\nExiting — no file generated.")
+            return
+
+        print("\n[Opus 4.6] Generating full deck…")
+        data = generate_content(topic, reference_markdown=reference_markdown, slide_count=args.slides)
+
+    elif args.provider == "nvidia":
         if not os.environ.get("NVIDIA_API_KEY"):
             print("Error: NVIDIA_API_KEY environment variable is required for --provider nvidia")
             sys.exit(1)
