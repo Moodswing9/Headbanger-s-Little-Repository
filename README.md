@@ -4,7 +4,7 @@
 
 **Generate professional presentations from any topic using Claude AI — in seconds**
 
-[![Version](https://img.shields.io/badge/version-4.4.0-6366f1?style=flat-square)](https://github.com/Moodswing9/claude-deck-generator/releases)
+[![Version](https://img.shields.io/badge/version-4.5.0-6366f1?style=flat-square)](https://github.com/Moodswing9/claude-deck-generator/releases)
 [![License](https://img.shields.io/badge/license-All%20Rights%20Reserved-ef4444?style=flat-square)](#license)
 [![Powered by Claude](https://img.shields.io/badge/powered%20by-Claude%20AI-f59e0b?style=flat-square)](#)
 [![Output](https://img.shields.io/badge/output-PPTX%20%7C%20HTML-22c55e?style=flat-square)](#usage)
