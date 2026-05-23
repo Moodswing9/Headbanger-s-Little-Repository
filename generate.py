@@ -16,6 +16,7 @@ Formats: pptx (default), html
 """
 
 import argparse
+import asyncio
 import html
 import io
 import json
@@ -381,29 +382,33 @@ def enrich_with_vision(reference_markdown: str, source: str) -> str:
             print("[vision] No embedded images found in source deck.")
             return reference_markdown
 
-        print(f"[vision] Analysing {len(images)} embedded image(s) with Phi-4 + DePlot...")
+        print(f"[vision] Analysing {len(images)} embedded image(s) with Phi-4 + DePlot (parallel)...")
         sections = ["", "---", "## Vision-extracted content (from embedded images)"]
 
-        for idx, img in enumerate(images, start=1):
+        async def _analyse_one(idx: int, img: dict) -> str:
             print(f"  [{idx}/{len(images)}] slide {img['slide']}: {pathlib.Path(img['path']).name}")
             section = [f"\n### Image {idx} (slide {img['slide']})"]
-
             try:
-                description = analyze_slide_image(img["path"]).strip()
+                description = (await asyncio.to_thread(analyze_slide_image, img["path"])).strip()
                 if description:
                     section.append(f"**Phi-4 visual content:**\n\n{description}")
             except Exception as e:
                 section.append(f"_Phi-4 analysis failed: {e}_")
-
             try:
-                table = extract_chart_data(img["path"]).strip()
+                table = (await asyncio.to_thread(extract_chart_data, img["path"])).strip()
                 if _looks_like_data_table(table):
                     section.append(f"**DePlot data table:**\n\n```\n{table}\n```")
             except Exception as e:
                 section.append(f"_DePlot extraction failed: {e}_")
+            return "\n".join(section)
 
-            sections.append("\n".join(section))
+        async def _analyse_all() -> list[str]:
+            return await asyncio.gather(*[
+                _analyse_one(idx, img) for idx, img in enumerate(images, start=1)
+            ])
 
+        image_sections = asyncio.run(_analyse_all())
+        sections.extend(image_sections)
         enrichment = "\n\n".join(sections)
 
     return reference_markdown + enrichment
@@ -473,7 +478,19 @@ def generate_content_nvidia(
         raw = raw.split("```")[1]
         if raw.startswith("json"):
             raw = raw[4:]
-    return json.loads(raw)
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError as e:
+        raise ValueError(
+            f"NVIDIA model returned malformed JSON — try a simpler topic or fewer slides.\n"
+            f"Parse error: {e}"
+        ) from e
+    if not isinstance(data, dict) or not isinstance(data.get("slides"), list):
+        raise ValueError(
+            "NVIDIA model returned an unexpected response structure. "
+            "Try again or reduce the slide count with --slides N."
+        )
+    return data
 
 
 def generate_content(
@@ -539,7 +556,19 @@ def generate_content(
         },
     )
     text = next(b.text for b in response.content if b.type == "text")
-    return json.loads(text)
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError as e:
+        raise ValueError(
+            f"Claude returned malformed JSON — try a simpler topic or fewer slides.\n"
+            f"Parse error: {e}"
+        ) from e
+    if not isinstance(data, dict) or not isinstance(data.get("slides"), list):
+        raise ValueError(
+            "Claude returned an unexpected response structure. "
+            "Try again or reduce the slide count with --slides N."
+        )
+    return data
 
 
 def generate_content_haiku(
@@ -599,7 +628,18 @@ def generate_content_haiku(
         },
     )
     text = next(b.text for b in response.content if b.type == "text")
-    data = json.loads(text)
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError as e:
+        raise ValueError(
+            f"Claude returned malformed JSON — try a simpler topic or fewer slides.\n"
+            f"Parse error: {e}"
+        ) from e
+    if not isinstance(data, dict) or not isinstance(data.get("slides"), list):
+        raise ValueError(
+            "Claude returned an unexpected response structure. "
+            "Try again or reduce the slide count with --slides N."
+        )
     if _return_usage:
         return data, response.usage
     return data

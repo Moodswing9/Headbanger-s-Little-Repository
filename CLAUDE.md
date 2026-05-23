@@ -19,8 +19,11 @@ python generate.py --list-themes
 python generate.py "Your Topic" --provider claude-haiku  # fast draft via Haiku 4.5
 python generate.py "Your Topic" --provider nvidia        # NVIDIA NIM (Palmyra)
 
-# Required environment variable
+# Required environment variables
 export ANTHROPIC_API_KEY=sk-ant-...
+
+# Required for --provider nvidia
+export NVIDIA_API_KEY=nvapi-...
 
 # Optional — enables --images flag
 export UNSPLASH_ACCESS_KEY=your-unsplash-access-key
@@ -68,7 +71,7 @@ One-off decks with bespoke layouts that `generate.py` can't produce:
 | `build_objection_slides_html.py` | `Objection_Handling_Slides.html` | HTML mirror of the objection deck — self-contained, no external dependencies |
 | `build_pitch_html.py` | `AI_Presentation_Generator_Pitch.html` | 11-slide pitch HTML — mirrors PRESENTATION_BLUEPRINT.md slide-for-slide, no fabricated stats |
 | `build_pitch_slides.py` | `AI_Presentation_Generator_Pitch.pptx` | 11-slide pitch pptx — mirrors PRESENTATION_BLUEPRINT.md slide-for-slide, no fabricated stats |
-| `build_qa_slides.py` | `QA_Prep_Slides.pptx` | 12-slide Q&A deck — numbered badge per question, bridging phrases, golden rule |
+| `build_qa_slides.py` | `QA_Prep_Slides.pptx` | 13-slide Q&A deck — numbered badge per question, bridging phrases, golden rule |
 | `build_visual_direction_slides.py` | `Visual_Direction.pptx` | 12-slide design brief — dark theme, Signal Blue accent used once per slide |
 
 Each builder is self-contained, requires only `python-pptx`, and uses `prs.slide_layouts[6]` (blank) with all elements drawn manually. No API call needed — content is hardcoded.
@@ -81,7 +84,7 @@ The repo ships a full boardroom playbook for pitching the tool itself:
 |------|------------|
 | `AI_Presentation_Generator_Pitch.pptx` / `.html` | 11-slide pitch deck, corporate theme |
 | `Closing_Slide.pptx` | Single closing slide — white bg, three numbers, one command |
-| `QA_Prep_Slides.pptx` | 12-slide Q&A deck — 10 hardest questions, bridging phrases, golden rule |
+| `QA_Prep_Slides.pptx` | 13-slide Q&A deck — 10 hardest questions, bridging phrases, golden rule |
 | `Objection_Handling_Slides.pptx` / `.html` | 6 objections preemptively neutralized |
 | `Visual_Direction.pptx` | 12-slide design brief embodying every rule it describes |
 | `opening_slide.html` | Animated terminal hook for live presentations |

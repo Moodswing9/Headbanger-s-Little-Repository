@@ -859,5 +859,63 @@ class TestIncludeNotes(unittest.TestCase):
         self.assertEqual(notes, "")
 
 
+# ---------------------------------------------------------------------------
+# Error-path tests for generate_content / generate_content_haiku
+# ---------------------------------------------------------------------------
+
+class TestGenerateContentErrors(unittest.TestCase):
+
+    def _patch_api_text(self, mock_cls, text: str):
+        mock_client = MagicMock()
+        mock_cls.return_value = mock_client
+        resp = MagicMock()
+        resp.content = [MagicMock(type="text", text=text)]
+        mock_client.messages.create.return_value = resp
+        return mock_client
+
+    @patch("generate.anthropic.Anthropic")
+    def test_malformed_json_raises_value_error(self, mock_cls):
+        self._patch_api_text(mock_cls, "not json {{{")
+        with self.assertRaises(ValueError) as ctx:
+            generate_content("Test")
+        self.assertIn("malformed JSON", str(ctx.exception))
+
+    @patch("generate.anthropic.Anthropic")
+    def test_non_dict_response_raises_value_error(self, mock_cls):
+        self._patch_api_text(mock_cls, '["a", "b", "c"]')
+        with self.assertRaises(ValueError) as ctx:
+            generate_content("Test")
+        self.assertIn("unexpected response structure", str(ctx.exception))
+
+    @patch("generate.anthropic.Anthropic")
+    def test_slides_not_a_list_raises_value_error(self, mock_cls):
+        self._patch_api_text(mock_cls, '{"title":"T","subtitle":"S","slides":"oops"}')
+        with self.assertRaises(ValueError) as ctx:
+            generate_content("Test")
+        self.assertIn("unexpected response structure", str(ctx.exception))
+
+    @patch("generate.anthropic.Anthropic")
+    def test_api_exception_propagates(self, mock_cls):
+        mock_client = MagicMock()
+        mock_cls.return_value = mock_client
+        mock_client.messages.create.side_effect = TimeoutError("Request timed out")
+        with self.assertRaises(TimeoutError):
+            generate_content("Test")
+
+    @patch("generate.anthropic.Anthropic")
+    def test_haiku_malformed_json_raises_value_error(self, mock_cls):
+        self._patch_api_text(mock_cls, "}{bad json")
+        with self.assertRaises(ValueError) as ctx:
+            generate_content_haiku("Test")
+        self.assertIn("malformed JSON", str(ctx.exception))
+
+    @patch("generate.anthropic.Anthropic")
+    def test_haiku_wrong_structure_raises_value_error(self, mock_cls):
+        self._patch_api_text(mock_cls, '{"title":"T","slides":null}')
+        with self.assertRaises(ValueError) as ctx:
+            generate_content_haiku("Test")
+        self.assertIn("unexpected response structure", str(ctx.exception))
+
+
 if __name__ == "__main__":
     unittest.main()

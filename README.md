@@ -4,7 +4,7 @@
 
 **Generate professional presentations from any topic using Claude AI — in seconds**
 
-[![Version](https://img.shields.io/badge/version-4.5.0-6366f1?style=flat-square)](https://github.com/Moodswing9/claude-deck-generator/releases)
+[![Version](https://img.shields.io/badge/version-4.6.0-6366f1?style=flat-square)](https://github.com/Moodswing9/claude-deck-generator/releases)
 [![License](https://img.shields.io/badge/license-All%20Rights%20Reserved-ef4444?style=flat-square)](#license)
 [![Powered by Claude](https://img.shields.io/badge/powered%20by-Claude%20AI-f59e0b?style=flat-square)](#)
 [![Output](https://img.shields.io/badge/output-PPTX%20%7C%20HTML-22c55e?style=flat-square)](#usage)
@@ -37,6 +37,15 @@ npx skills add Moodswing9/claude-deck-generator -g
 ```
 
 This registers the skill and commands globally so you can run `/deck "Your Topic"` from any Claude Code session.
+
+| Command | What it does |
+|:---|:---|
+| `/deck "Your Topic"` | Generate a new deck — theme, format, and slide count auto-suggested from context |
+| `/deck "Topic" --draft` | Preview outline + cost with Haiku, then press Enter in your terminal to upscale to Opus |
+| `/deck-remix old.pptx` | Rebuild an existing deck with fresh structure |
+| `/deck-remix old.pptx --vision` | Remix with Phi-4 + DePlot vision pass — describes images and extracts chart tables before regeneration |
+
+The skill applies judgment automatically: it suggests the right theme for your audience, flags when draft mode makes sense (large or complex decks), and warns when vision mode would add value.
 
 ---
 
@@ -72,8 +81,9 @@ python generate.py "Your Topic"
 | `--output` | auto | Output file path |
 | `--slides N` | `12` | Number of slides to generate (4 – 20) |
 | `--provider` | `anthropic` | Content provider: `anthropic` (Claude) or `nvidia` (Palmyra-Creative-122B via NIM) |
+| `--draft` | off | Two-phase mode: Haiku previews the slide outline + cost estimate; press Enter to upscale to Opus |
 | `--remix FILE` | — | Remix an existing `.pptx` — provider rebuilds it with new structure |
-| `--vision` | off | With `--remix`: run Phi-4 + DePlot on every embedded image (requires `NVIDIA_API_KEY`) |
+| `--vision` | off | With `--remix`: run Phi-4 + DePlot on every embedded image in parallel (requires `NVIDIA_API_KEY`) |
 | `--no-notes` | off | Omit speaker notes from the output |
 | `--images` | off | Embed Unsplash photos (requires `UNSPLASH_ACCESS_KEY`) |
 | `--list-themes` | — | List available themes and exit |
@@ -93,10 +103,13 @@ python generate.py "Machine Learning" --theme light --output ml.pptx
 # Control slide count
 python generate.py "Q4 Business Review" --slides 8
 
+# Draft mode — Haiku previews structure + cost, Enter to upscale to Opus
+python generate.py "Q4 Business Review" --draft
+
 # Remix an existing deck (text only)
 python generate.py "Q4 Business Review" --remix old_deck.pptx
 
-# Remix WITH vision — Phi-4 describes images, DePlot extracts charts
+# Remix WITH vision — Phi-4 + DePlot run on all images in parallel
 python generate.py "Q4 Business Review" --remix old_deck.pptx --vision
 
 # No speaker notes
@@ -155,7 +168,7 @@ export NVIDIA_API_KEY=nvapi-...
 python generate.py "Q4 Strategy Review" --remix old_deck.pptx --vision
 ```
 
-Vision adds 1-3 seconds per image (two NIM calls per image), so a 20-image deck takes ~30-60 seconds longer than text-only remix. If your source deck is mostly text, skip `--vision` to save the round-trips.
+Vision runs all images in **parallel** (`asyncio.gather` + `asyncio.to_thread`), so a 20-image deck takes ~30 seconds instead of ~4 minutes. Each image still makes two NIM calls (Phi-4 + DePlot). If your source deck is mostly text, skip `--vision` to save the round-trips entirely.
 
 ---
 
