@@ -533,7 +533,7 @@ def generate_content(
         )
 
     response = client.messages.create(
-        model="claude-opus-4-6",
+        model="claude-opus-4-7",
         max_tokens=6000,
         thinking={"type": "adaptive"},
         system=(
@@ -552,7 +552,8 @@ def generate_content(
         ),
         messages=[{"role": "user", "content": user_message}],
         output_config={
-            "format": {"type": "json_schema", "schema": SLIDE_SCHEMA}
+            "effort": "high",
+            "format": {"type": "json_schema", "schema": SLIDE_SCHEMA},
         },
     )
     text = next(b.text for b in response.content if b.type == "text")
@@ -1021,9 +1022,9 @@ def main():
     parser.add_argument("--no-notes", action="store_true",
                         help="Omit speaker notes from the output")
     parser.add_argument("--provider", choices=["anthropic", "claude-haiku", "nvidia"], default="anthropic",
-                        help="AI provider for content generation: anthropic (Opus 4.6, default), claude-haiku (Haiku 4.5, fast draft), nvidia (Palmyra via NIM)")
+                        help="AI provider for content generation: anthropic (Opus 4.7, default), claude-haiku (Haiku 4.5, fast draft), nvidia (Palmyra via NIM)")
     parser.add_argument("--draft", action="store_true",
-                        help="Two-phase mode: generate Haiku outline first (~20s, ~$0.02), confirm structure, then upscale to Opus 4.6")
+                        help="Two-phase mode: generate Haiku outline first (~20s, ~$0.02), confirm structure, then upscale to Opus 4.7")
     args = parser.parse_args()
 
     if args.list_themes:
@@ -1088,19 +1089,19 @@ def main():
             f"tokens | ~${haiku_cost:.3f}"
         )
         opus_est = "~$0.20–0.50"
-        print(f"[Opus 4.6]   ~30–90 s to generate | estimated cost: {opus_est}\n")
+        print(f"[Opus 4.7]   ~30–90 s to generate | estimated cost: {opus_est}\n")
 
         # ── Phase 2: confirm and upscale ─────────────────────────────────────
         try:
             input(
-                "Happy with the structure? Press Enter to upscale to Claude Opus 4.6, "
+                "Happy with the structure? Press Enter to upscale to Claude Opus 4.7, "
                 "or Ctrl+C to exit without generating a file.\n> "
             )
         except KeyboardInterrupt:
             print("\nExiting — no file generated.")
             return
 
-        print("\n[Opus 4.6] Generating full deck…")
+        print("\n[Opus 4.7] Generating full deck…")
         data = generate_content(topic, reference_markdown=reference_markdown, slide_count=args.slides)
 
     elif args.provider == "nvidia":

@@ -41,7 +41,7 @@ The core generation lives in `generate.py`, which is also imported by `app.py` (
 
 Adding a new theme means adding one dict entry with both sets of keys.
 
-**`generate_content(topic, *, reference_markdown="", slide_count=12)`** calls `claude-opus-4-6` with `thinking: {type: "adaptive"}` and `output_config.format` set to `SLIDE_SCHEMA`. When `reference_markdown` is supplied (from `ingest_pptx()`), it is injected into the user message inside `<reference_deck>` tags and Claude rebuilds the deck from that material. `slide_count` is clamped to 4–20.
+**`generate_content(topic, *, reference_markdown="", slide_count=12)`** calls `claude-opus-4-7` with `thinking: {type: "adaptive"}` and `output_config.format` set to `SLIDE_SCHEMA`. When `reference_markdown` is supplied (from `ingest_pptx()`), it is injected into the user message inside `<reference_deck>` tags and Claude rebuilds the deck from that material. `slide_count` is clamped to 4–20.
 
 **`generate_content_haiku(topic, *, reference_markdown="", slide_count=12)`** is the fast-draft variant. Uses `claude-haiku-4-5-20251001` without adaptive thinking and a 4 000-token ceiling. Returns the same dict structure — all downstream builders work unchanged. Pass `--provider claude-haiku` to use it.
 
