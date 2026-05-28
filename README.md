@@ -17,7 +17,7 @@
 
 <div align="center">
 
-![Sample generated deck — executive theme](docs/screenshot.png)
+![AI Presentation Generator — pitch deck output, dark corporate theme](docs/screenshot.png)
 
 </div>
 
